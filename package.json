@@ -10,6 +10,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.17.1"
-  }
+    "@semaphore-protocol/contracts": "^2.5.0",
+    "express": "^4.17.1",
+    "web3": "^1.8.0"
+  },
+  "devDependencies": {
+    "@semaphore-protocol/group": "^2.5.0",
+    "@semaphore-protocol/hardhat": "^0.1.0",
+    "@semaphore-protocol/identity": "^2.5.0",
+    "@semaphore-protocol/proof": "^2.5.0"
+  },
+  "type": "module"
 }
