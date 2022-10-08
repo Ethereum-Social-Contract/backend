@@ -11,7 +11,7 @@ import { Identity } from "@semaphore-protocol/identity"
 import { Group } from "@semaphore-protocol/group"
 import { generateProof } from "@semaphore-protocol/proof"
 import { verifyProof } from "@semaphore-protocol/proof"
-
+var consortiumPublicKey = fs.readFileSync('consortiumPubKey.pem', 'utf8')
 
 const app = express();
 //const account = web3.eth.accounts.privateKeyToAccount("cccb3f84822dd53c7471f472efb3a84be0bf305c32d7202cb88ab7d6eb5a3cbf");
@@ -34,11 +34,33 @@ async function generateDemoProof () {
     return fullProof
 }
 
+
 async function verifyInclusionProof(inclusionProof, identityCommitment){
     console.log(inclusionProof)
     const verificationKey = JSON.parse(fs.readFileSync("./static/semaphore.json", "utf-8"))
     var validProof = await verifyProof(verificationKey, inclusionProof) 
     return validProof
+}
+
+
+function encryptForConsortium (plainText) {
+    return crypto.publicEncrypt({
+      key: consortiumPublicKey,
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: 'sha256'
+    },
+    // We convert the data string to a buffer
+    Buffer.from(plainText)
+    )
+}
+
+async function saveNewSecrets(newEncryptedSecret){
+    fs.readFile('encryptedSecrets.json', function (err, data) {
+        var json = JSON.parse(data)
+        json.push('search result: ' + currentSearchResult)
+    
+        fs.writeFile("results.json", JSON.stringify(json))
+    })
 }
 
 app.post('/', async (req, res) => {
@@ -56,4 +78,4 @@ app.post('/', async (req, res) => {
     res.send(JSON.stringify({"signedIdentityCommitment": signature.signature}))
 });
 
-app.listen(3000, () => console.log('Example app is listening on port 3000.'));
+app.listen(3000, () => console.log('ESC server is listening on port 3000.'));
