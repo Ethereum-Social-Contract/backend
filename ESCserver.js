@@ -27,38 +27,37 @@ const app = express();
 app.use(express.json())
 app.use(bodyParser.json());
 
-
+// use the bitquery api to request all MemberAdded events from the semaphoreGroups.sol onchain contract, to use in re-creating the merkle tree
 async function getMemberAddedEvents(semaphoreGroupsContractAddress){
-var options = {
-   'method': 'POST',
-   'url': 'https://graphql.bitquery.io',
-   'headers': {
-      'Content-Type': 'application/json',
-      'X-API-KEY': 'BQY2vzTN2GOyzgDYlmWymcD4fiHhZt0Z'
-   },
-   body: JSON.stringify({
-      "query": "{\n  ethereum {\n    smartContractEvents(options: {desc: \"block.height\", limit: 10},\n      smartContractEvent: {is: \"MemberUpdated\"},\n      smartContractAddress: \n      {is: \"" + semaphoreGroupsContractAddress + "\"}) {\n      block {\n        height\n        timestamp {\n          iso8601\n          unixtime\n        }\n      }\n      arguments {\n        value\n        argument\n      }\n    }\n  }\n}",
-      "variables": "{}"
-   })
+    var options = {
+    'method': 'POST',
+    'url': 'https://graphql.bitquery.io',
+    'headers': {
+        'Content-Type': 'application/json',
+        'X-API-KEY': 'BQY2vzTN2GOyzgDYlmWymcD4fiHhZt0Z'
+    },
+    body: JSON.stringify({
+        "query": "{\n  ethereum {\n    smartContractEvents(options: {desc: \"block.height\", limit: 10},\n      smartContractEvent: {is: \"MemberAdded\"},\n      smartContractAddress: \n      {is: \"" + semaphoreGroupsContractAddress + "\"}) {\n      block {\n        height\n        timestamp {\n          iso8601\n          unixtime\n        }\n      }\n      arguments {\n        value\n        argument\n      }\n    }\n  }\n}",
+        "variables": "{}"
+    })
 
-};
-request(options, function (error, response) {
-   if (error) throw new Error(error);
-   events = JSON.parse(response.body);
-});
-
+    };
+    request(options, function (error, response) {
+        if (error) throw new Error(error);
+        var memberAddedEvents = JSON.parse(response.body)["ethereum"]["smartContractEvents"]
+    });
+    return memberAddedEvents;
 
 }
 
-//This function allows for us to reconstrict the 
+//This function allows for us to reconstrict the group (identity commitment merkle tree) object from onchain memberAdd events 
 async function reConstructGroup(){
     const group = new Group()
-    var MemberAddedEvents = [] // get from alchemy api 
+    var MemberAddedEvents = getMemberAddedEvents(semaphoreGroupsContractAddress); // get from alchemy api 
     for (newMember in MemberAddedEvents){
         var identityCommitment = newMember[2];
         group.addMembers(identityCommitment) //add the identity commitment specified in the event to the local group object
     }
-    //Todo: this requires looping through all smart contract deposit events to reconstruct the identityCommitment merkle tree so that it can be manipulated in node js
     return group
 }
 
@@ -92,6 +91,7 @@ function encryptForConsortium (plainText) {
     )
 }
 
+// saves the 
 async function saveEncryptedIdentitySecret(newEncryptedSecret){
     fs.readFile('encryptedSecrets.json', function (err, data) {
         var json = JSON.parse(data)
@@ -101,6 +101,10 @@ async function saveEncryptedIdentitySecret(newEncryptedSecret){
     })
 }
 
+
+// accepts requests from client that specify the identity secret for a withdrawal proof, and returns a signature for the withdrawl request
+// checks that the identity secret corresponds to the provided withdrawl request
+// the client will then provide the signature to the smart contract in order to authorise the withdrawl
 app.post('/', async (req, res) => {
     var signature = "";
     //const signingAddress = web3.eth.accounts.recover("Hello world", signature.signature, true);
