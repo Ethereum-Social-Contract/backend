@@ -18,11 +18,9 @@ import { packToSolidityProof } from "@semaphore-protocol/proof"
 //the secret data for each deposit into the pool is given, by the client, to this server 
 var consortiumPublicKey = fs.readFileSync('./static/consortiumPubKey.pem', 'utf8')
 var severSigningPrivKey = "cccb3f84822dd53c7471f472efb3a84be0bf305c32d7202cb88ab7d6eb5a3cbf";
-var semaphoreGroupsContractAddress = "";
+var semaphoreGroupsContractAddress = "0xe585f0db9ab24dc912404dffb9b28fb8bf211fa6";
 
 const app = express();
-//const account = web3.eth.accounts.privateKeyToAccount("cccb3f84822dd53c7471f472efb3a84be0bf305c32d7202cb88ab7d6eb5a3cbf");
-//web3.eth.accounts.wallet.add(account);
 
 app.use(express.json())
 app.use(bodyParser.json());
@@ -91,7 +89,7 @@ function encryptForConsortium (plainText) {
     )
 }
 
-// saves the 
+// saves the new encrypted identiy secret to a file to be accessed later
 async function saveEncryptedIdentitySecret(newEncryptedSecret){
     fs.readFile('encryptedSecrets.json', function (err, data) {
         var json = JSON.parse(data)
@@ -113,6 +111,7 @@ app.post('/', async (req, res) => {
     const group = reConstructGroup();
     var reCreatedWithdrawlProof = reCreateMembershipProof(identitySecret, group);
 
+    // check that locally re-created withdrawl proof matches one given by client
     if (withdrawlProof == reCreatedWithdrawlProof){
         var signature = await web3.eth.accounts.sign(withdrawlProof, severSigningPrivKey);
         var encryptedIdentiySecret = encryptForConsortium(identitySecret);
